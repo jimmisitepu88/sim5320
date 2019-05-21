@@ -5,7 +5,8 @@ Support by mikroavr.com
 
 below example
 
-'''c++
+'''
+
 #include <sim5320.h>
 
 sim5320 sim(39, 4800);
