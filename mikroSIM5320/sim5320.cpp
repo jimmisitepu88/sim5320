@@ -49,7 +49,7 @@ bool sim5320::netReg(){
     bool i, j; 
     byte k, sts;
 
-    delay(1000);
+    delay(2000);
     i = sentAT("AT+CREG?", "+CREG: 0,1", 2000);
     j = sentAT("AT+CFUN?", "+CFUN: 1", 2000);
     if( j != true){
@@ -67,19 +67,19 @@ bool sim5320::netReg(){
 
 bool sim5320::conAPN(){
     bool i, j;
-    delay(1700);
+    delay(2000);
     j = sentAT("AT+CGATT?", "+CGATT: 1", 2000);    
     if (j != true){
         delay(1000);
         sentAT("AT+CGATT=1", "OK", 2000);
     }
-    delay(1700);
+    delay(2000);
     i = sentAT("AT+CGSOCKCONT=1,\"IP\",\"Internet\"","OK", 2000);
     return i;
 }
 
 void sim5320::pushData(String host, String url){
-   delay(2500);
+   delay(3000);
    serialAT.println(String("AT+CHTTPACT=") + "\"" + host + "\",80");
    wRespon(3000);
    serialAT.print(String("GET ") + "http://" + host + url + " HTTP/1.1\r\n");
@@ -89,37 +89,12 @@ void sim5320::pushData(String host, String url){
    wRespon(16000);
 }
 
-
-void sim5320::rstSIM(){
-    digitalWrite(RST, HIGH);
-    delay(500);
-    digitalWrite(RST, LOW);
-    delay(1000);
-    digitalWrite(RST, HIGH);
-    delay(1000);
-    while (!serialAT.available()){}
-    nMillis = millis();
-    oMillis = nMillis;
-    while(nMillis - oMillis < 16000){
-        nMillis = millis();
-        while (serialAT.available())
-        {
-            serialMON.println(serialAT.readString());
-        }
-        
-    }
-    serialMON.println(F("rst OK"));
-    oMillis = nMillis;
-}
-
 String sim5320::gTime(){
-    String Twkt;
-    serialAT.println("AT+CTZR=1");
-    wRespon(2000);
-
-    delay(1000);
-    serialAT.println("AT+CTZU=1");
-    wRespon(2000);
+    String Twkt; int len; char buf[55];
+    sentAT("AT+CTZR=1", "OK", 1000);
+    //wRespon(2000);
+    sentAT("AT+CTZU=1", "OK", 1000);
+    //wRespon(2000);
     
     delay(1000);
     serialAT.println("AT+CCLK?");
@@ -132,8 +107,16 @@ String sim5320::gTime(){
             Twkt =  serialAT.readString();
         }  
     }
+    len = Twkt.length();
+    memset(buf, '\0', len);
+    Twkt.toCharArray(buf, len);
+    Twkt = "";
+    for(int j = 21; j<len-11 ; j++){
+        Twkt += String(buf[j]);
+    }
+    Twkt = String("20") + Twkt;
+    //serialMON.println(Twkt);
     oMillis = nMillis;
-    serialMON.println(Twkt);
     return Twkt;
 }
 
@@ -160,6 +143,42 @@ int8_t sentAT(char* ATcommand, char* expected_answer, unsigned int timeout){
     }
    }while((answer == 0) && ((millis() - prevMillis) < timeout));
    return answer;
+}
+
+void sim5320::rstSIM(){
+    String answer; char buf[30]; int len;
+
+    serialMON.println(F("rst begin"));
+    digitalWrite(RST, LOW);
+    delay(3000);
+    digitalWrite(RST, HIGH);
+    delay(1000);
+
+    while(answer != "PB DONE"){
+        nMillis = millis();
+        if(nMillis - oMillis > 30000){
+            serialMON.println("rst again");
+            digitalWrite(RST, LOW);
+            delay(3000);
+            digitalWrite(RST, HIGH);
+            delay(1000);
+            oMillis = nMillis;
+        }
+            memset(buf, '\0', 30);    
+            while(serialAT.available()){
+                answer = serialAT.readString();
+            }
+            serialMON.println(answer);
+            len = answer.length();
+            answer.toCharArray(buf, len);
+            if(strstr(buf, "PB DONE")){
+                break;
+            }
+            delay(1000);
+    }
+
+    serialMON.println("rst ok");
+    return answer;
 }
 
 void wRespon(unsigned long wkt){
