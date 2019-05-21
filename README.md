@@ -5,6 +5,7 @@ Support by mikroavr.com
 
 below example
 
+'''c++
 #include <sim5320.h>
 
 
@@ -41,13 +42,9 @@ void setup() {
 
 }
 
-
-
 void loop() {
 
   // put your main code here, to run repeatedly:
-
-
 
   cur_time = millis();
 
@@ -62,8 +59,6 @@ void loop() {
     }
 
     Serial.println(F("network ok"));
-
-    
 
     delay(1000);
 
