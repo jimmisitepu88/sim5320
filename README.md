@@ -1,6 +1,6 @@
 # sim5320
 library Arduino for internet modul 3G, SIM5320E,
-only http function and https function,
+only http function and https function(maybe will devolope),
 Support by mikroavr.com
 
 below example
