@@ -78,25 +78,49 @@ bool sim5320::conAPN(){
     return i;
 }
 
-void sim5320::pushData(String host, String url){
+bool sim5320::pushData(String host, String url){
+   bool sts;
+   String answer; char buf[30]; int len = 0; 
    delay(3000);
    serialAT.println(String("AT+CHTTPACT=") + "\"" + host + "\",80");
+   delay(500);
    wRespon(3000);
    serialAT.print(String("GET ") + "http://" + host + url + " HTTP/1.1\r\n");
    serialAT.print(String(host) + "\r\n");
    serialAT.print("Connection: close\r\n\r\n");
    serialAT.print(char(0x1A));
-   wRespon(16000);
+
+   nMillis = millis();
+   oMillis = nMillis;
+   memset(buf, '\0', 30);
+   while ( nMillis - oMillis < 16000){
+        nMillis = millis();
+        
+        while(serialAT.available()){
+        serialMON.println(serialAT.readString());
+        len++;
+        }
+    }
+    serialMON.println(String("i: ") + len);
+        if( len <= 2){
+            sts = true;
+        }
+        if (len > 2){
+        sts = false;
+        }
+    return sts;
 }
 
 String sim5320::gTime(){
     String Twkt; int len; char buf[55];
+    delay(500);
     sentAT("AT+CTZR=1", "OK", 1000);
     //wRespon(2000);
+    delay(500);
     sentAT("AT+CTZU=1", "OK", 1000);
     //wRespon(2000);
     
-    delay(1000);
+    delay(1500);
     serialAT.println("AT+CCLK?");
     nMillis = millis();
     oMillis = nMillis;
@@ -147,7 +171,6 @@ int8_t sentAT(char* ATcommand, char* expected_answer, unsigned int timeout){
 
 void sim5320::rstSIM(){
     String answer; char buf[30]; int len;
-
     serialMON.println(F("rst begin"));
     digitalWrite(RST, LOW);
     delay(3000);
@@ -156,7 +179,8 @@ void sim5320::rstSIM(){
 
     while(answer != "PB DONE"){
         nMillis = millis();
-        if(nMillis - oMillis > 30000){
+        if(nMillis - oMillis > 40000){
+            memset(buf, '\0', 30); 
             serialMON.println("rst again");
             digitalWrite(RST, LOW);
             delay(3000);
@@ -170,15 +194,29 @@ void sim5320::rstSIM(){
             }
             serialMON.println(answer);
             len = answer.length();
-            answer.toCharArray(buf, len);
+            answer.toCharArray(buf, len); answer = "";
             if(strstr(buf, "PB DONE")){
                 break;
             }
             delay(1000);
     }
 
-    serialMON.println("rst ok");
+    serialMON.println("rst ok");delay(1000);
+    //serialAT.println("AT+IPREX=4800");
+    wRespon(2000);
     return answer;
+}
+
+void sim5320::baudCheck(){
+    delay(1000);
+    serialAT.println("AT+IPREX=?");
+    wRespon(2000);
+    delay(1000);
+    serialAT.println("AT+IPREX?");
+    wRespon(2000);
+    serialAT.println("AT+IPR?");
+    wRespon(2000);
+    
 }
 
 void wRespon(unsigned long wkt){
@@ -189,5 +227,17 @@ void wRespon(unsigned long wkt){
     while(serialAT.available()){
       serialMON.println(serialAT.readString());
     }
-   }
+ }
+}
+
+void sim5320::waiting(unsigned long wkt){
+   serialMON.println(F("waiting loop"));
+   nMillis = millis();
+   oMillis = nMillis;
+   while ( nMillis - oMillis < wkt){
+    nMillis = millis();
+    while(serialAT.available()){
+      serialMON.println(serialAT.readString());
+    }
+ }
 }
