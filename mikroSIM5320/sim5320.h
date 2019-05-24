@@ -34,8 +34,10 @@ class sim5320
         bool hasSSL();
         bool netReg();
         bool conAPN();
-        void pushData(String host, String ulr);
+        bool pushData(String host, String ulr);
         String gTime();
+        void baudCheck();
+        void waiting(unsigned long wkt);
 
 };
 
