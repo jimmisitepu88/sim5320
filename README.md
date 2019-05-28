@@ -7,7 +7,7 @@ below example
 
 #include <sim5320.h>
 
-sim5320 sim(39, 4800);
+sim5320 sim(39, 4800); // rst_pin, baudrate
 
 unsigned long cur_time, old_time;
 
