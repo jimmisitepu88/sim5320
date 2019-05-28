@@ -36,6 +36,11 @@ void loop() {
     
     delay(1000);
     String url = "/pln/i.php?temp=30&hum=78\r"; 
-    sim.pushData(host,url);
+    swhile ( !sim.pushHTTP(host, link )){
+        serialMon.println(F("fail to server"));
+        sim.waiting(20000);
+        sim.pushHTTP(host,link); link = "";
+      }
+      serialMon.println(F("ok to server"));
   }
 }
