@@ -21,7 +21,8 @@ void loop() {
   cur_time = millis();
   if ( cur_time - old_time >= 5000){
     String url = "/TinyGSM/logo.txt\r"; 
-    sim.pushHTTP(host, url);
+    Serial.print("status: ");
+    Serial.println(sim.pushHTTP(host, url));
     old_time = cur_time;
   }
 }
