@@ -9,13 +9,13 @@
 #include <Arduino.h>
 #include <sim5320.h>
 
+#define RXD1 16
+#define TXD1 17
+
 int8_t sentAT(char* ATcommand, char* expected_answer, unsigned int timeout);
 void wRespon(unsigned long wkt);
 unsigned long nMillis, oMillis;
 
-#if ARDUINO_VERSION <= 106
-    void yield(void) {};
-#endif
 
 sim5320::sim5320(byte rst,  unsigned int baud){
     begin(rst, baud);
@@ -25,7 +25,8 @@ void sim5320::begin(byte rst,  unsigned int baud){
     RST = rst;
     BAUD = baud;
     pinMode(RST, OUTPUT);
-    serialAT.begin(BAUD);
+    //serialAT.begin(BAUD);
+	serialAT.begin(BAUD, SERIAL_8N1, RXD1, TXD1);
 }
 
 String sim5320::getModemInfo(){
@@ -78,9 +79,9 @@ bool sim5320::conAPN(){
     return i;
 }
 
-bool sim5320::pushData(String host, String url){
+bool sim5320::pushHTTP(String host, String url){
    bool sts;
-   String answer; char buf[30]; int len = 0; 
+   String answer, p_answer; char buf; int len = 0; 
    delay(3000);
    serialAT.println(String("AT+CHTTPACT=") + "\"" + host + "\",80");
    delay(500);
@@ -92,22 +93,27 @@ bool sim5320::pushData(String host, String url){
 
    nMillis = millis();
    oMillis = nMillis;
-   memset(buf, '\0', 30);
-   while ( nMillis - oMillis < 16000){
+   while ( nMillis - oMillis < 5000){
         nMillis = millis();
-        
-        while(serialAT.available()){
-        serialMON.println(serialAT.readString());
-        len++;
+            while(serialAT.available()){
+            buf = serialAT.read();
+            if(buf == '\n'){
+                len++;
+            }
+            if(len == 8){
+                answer += String(buf);
+            }
         }
+    }  
+    p_answer = answer.substring(10,13);
+    serialMON.print("res: ");
+    serialMON.println(p_answer);
+    if(p_answer == "200"){
+        sts = 1;
+    }else{
+        sts = 0;
     }
-    serialMON.println(String("i: ") + len);
-        if( len <= 2){
-            sts = true;
-        }
-        if (len > 2){
-        sts = false;
-        }
+    answer = ""; p_answer = "";
     return sts;
 }
 
@@ -170,41 +176,14 @@ int8_t sentAT(char* ATcommand, char* expected_answer, unsigned int timeout){
 }
 
 void sim5320::rstSIM(){
-    String answer; char buf[30]; int len;
+    String answer; char buf[100]; int len;
     serialMON.println(F("rst begin"));
     digitalWrite(RST, LOW);
     delay(3000);
     digitalWrite(RST, HIGH);
     delay(1000);
-
-    while(answer != "PB DONE"){
-        nMillis = millis();
-        if(nMillis - oMillis > 40000){
-            memset(buf, '\0', 30); 
-            serialMON.println("rst again");
-            digitalWrite(RST, LOW);
-            delay(3000);
-            digitalWrite(RST, HIGH);
-            delay(1000);
-            oMillis = nMillis;
-        }
-            memset(buf, '\0', 30);    
-            while(serialAT.available()){
-                answer = serialAT.readString();
-            }
-            serialMON.println(answer);
-            len = answer.length();
-            answer.toCharArray(buf, len); answer = "";
-            if(strstr(buf, "PB DONE")){
-                break;
-            }
-            delay(1000);
-    }
-
-    serialMON.println("rst ok");delay(1000);
-    //serialAT.println("AT+IPREX=4800");
-    wRespon(2000);
-    return answer;
+	wRespon(20000);
+    serialMON.println("rst ok");delay(1000);    
 }
 
 void sim5320::baudCheck(){
